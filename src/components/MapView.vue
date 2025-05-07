@@ -22,7 +22,7 @@ onMounted(() => {
     map.value = L.map('map', {
       crs: L.CRS.Simple,
       minZoom: 0,
-      maxZoom: 4,
+      maxZoom: 5,
       zoomControl: true,
       scrollWheelZoom: true, // 启用鼠标滚轮缩放
       center: [128, 128], // 调整中心点
@@ -46,14 +46,14 @@ onMounted(() => {
     console.log('地图范围设置完成:', bounds)
 
     // 添加瓦片图层
-    const tileLayer = L.tileLayer('/tiles/{z}/{x}_{y}.png', {
+    const tileLayer = L.tileLayer('../../assets/maps/tiles/{z}/{x}_{y}.png', {
       noWrap: true,
       attribution: '© Nanjing Map',
       errorTileUrl: 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAyJpVFh0WE1MOmNvbS5hZG9iZS54bXAAAAAAADw/eHBhY2tldCBiZWdpbj0i77u/IiBpZD0iVzVNME1wQ2VoaUh6cmVTek5UY3prYzlkIj8+IDx4OnhtcG1ldGEgeG1sbnM6eD0iYWRvYmU6bnM6bWV0YS8iIHg6eG1wdGs9IkFkb2JlIFhNUCBDb3JlIDUuMy1jMDExIDY2LjE0NTY2MSwgMjAxMi8wMi8wNi0xNDo1NjoyNyAgICAgICAgIj4gPHJkZjpSREYgeG1sbnM6cmRmPSJodHRwOi8vd3d3LnczLm9yZy8xOTk5LzAyLzIyLXJkZi1zeW50YXgtbnMjIj4gPHJkZjpEZXNjcmlwdGlvbiByZGY6YWJvdXQ9IiIgeG1sbnM6eG1wPSJodHRwOi8vbnMuYWRvYmUuY29tL3hhcC8xLjAvIiB4bWxuczp4bXBNTT0iaHR0cDovL25zLmFkb2JlLmNvbS94YXAvMS4wL21tLyIgeG1sbnM6c3RSZWY9Imh0dHA6Ly9ucy5hZG9iZS5jb20veGFwLzEuMC9zVHlwZS9SZXNvdXJjZVJlZiMiIHhtcDpDcmVhdG9yVG9vbD0iQWRvYmUgUGhvdG9zaG9wIENTNiAoV2luZG93cykiIHhtcE1NOkluc3RhbmNlSUQ9InhtcC5paWQ6QUM2QjY0MDVBMDI4MTFFNUE0QkRGMzM0QzM0QzM0QzMiIHhtcE1NOkRvY3VtZW50SUQ9InhtcC5kaWQ6QUM2QjY0MDZBMDI4MTFFNUE0QkRGMzM0QzM0QzM0QzMiPiA8eG1wTU06RGVyaXZlZEZyb20gc3RSZWY6aW5zdGFuY2VJRD0ieG1wLmlpZDpBQzZCNjQwM0EwMjgxMUU1QTRCREYzMzRDMzRDMzRDMiIgc3RSZWY6ZG9jdW1lbnRJRD0ieG1wLmRpZDpBQzZCNjQwNEEwMjgxMUU1QTRCREYzMzRDMzRDMzRDMiIvPiA8L3JkZjpEZXNjcmlwdGlvbj4gPC9yZGY6UkRGPiA8L3g6eG1wbWV0YT4gPD94cGFja2V0IGVuZD0iciI/PgH//v38+/r5+Pf29fTz8vHw7+7t7Ovq6ejn5uXk4+Lh4N/e3dzb2tnY19bV1NPS0dDPzs3My8rJyMfGxcTDwsHAv769vLu6ubi3trW0s7KxsK+urayrqqmop6alpKOioaCfnp2cm5qZmJeWlZSTkpGQj46NjIuKiYiHhoWEg4KBgH9+fXx7enl4d3Z1dHNycXBvbm1sa2ppaGdmZWRjYmFgX15dXFtaWVhXVlVUU1JRUE9OTUxLSklIR0ZFRENCQUA/Pj08Ozo5ODc2NTQzMjEwLy4tLCsqKSgnJiUkIyIhIB8eHRwbGhkYFxYVFBMSERAPDg0MCwoJCAcGBQQDAgEAACH5BAAAAAAALAAAAAAEAAQAAAIFhI+py+0PYysAOw==',
       tileSize: 256,
-      maxNativeZoom: 4,
+      maxNativeZoom: 7,
       minZoom: 0,
-      maxZoom: 4,
+      maxZoom: 5,
       continuousWorld: false,
       updateWhenZooming: false
     })
@@ -111,10 +111,12 @@ onMounted(() => {
 
 <style scoped>
 .map-container {
-  width: 100%;
+  width: 100vw;
   height: 100vh;
-  background-color: #f0f0f0;
+  background-color: #000;
   position: relative;
+  margin: 0;
+  padding: 0;
 }
 
 .map-container::after {
