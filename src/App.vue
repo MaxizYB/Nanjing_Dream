@@ -33,10 +33,11 @@ function handlePeriodChange(period) {
 </template>
 
 <style>
-* {
+html, body, #app {
+  width: 100vw;
+  height: 100vh;
   margin: 0;
   padding: 0;
-  box-sizing: border-box;
 }
 
 body {
@@ -46,7 +47,7 @@ body {
 .app-layout {
   display: flex;
   flex-direction: column;
-  height: 100vh;
+  height: 100%;
 }
 .top-navbar {
   width: 100%;
@@ -54,17 +55,17 @@ body {
   align-items: center;
   background: linear-gradient(90deg, #f5f3e7 80%, #e6e1d3 100%);
   border-bottom: 1.5px solid #d6c9a5;
-  padding: 0 18px;
-  height: 24px;
-  min-height: 24px;
+  padding: 0 24px;
+  height: 48px;
+  min-height: 48px;
   box-sizing: border-box;
 }
 .navbar-section.logo {
-  font-size: 1.1rem;
+  font-size: 1.4rem;
   font-weight: bold;
   color: #a08c5b;
   font-family: 'STSong', 'SimSun', serif;
-  margin-right: 18px;
+  margin-right: 24px;
   white-space: nowrap;
 }
 .menu-btn {
@@ -72,9 +73,9 @@ body {
   color: #4b3e2e;
   border: none;
   border-radius: 10px;
-  padding: 4px 10px;
-  font-size: 0.95rem;
-  margin-right: 16px;
+  padding: 6px 16px;
+  font-size: 1.1rem;
+  margin-right: 20px;
   cursor: pointer;
   font-family: 'STKaiti', 'KaiTi', serif;
   transition: background 0.2s;
@@ -88,6 +89,8 @@ body {
 }
 .main-content {
   flex: 1;
+  width: 100%;
+  height: 100%;
   overflow: hidden;
   display: flex;
   flex-direction: column;

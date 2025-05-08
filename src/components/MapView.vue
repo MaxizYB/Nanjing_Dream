@@ -110,7 +110,7 @@ onMounted(() => {
 
 <style scoped>
 .map-container {
-  width: 100vw;
+  width: 100%;
   height: 100vh;
   background-color: #000;
   position: relative;

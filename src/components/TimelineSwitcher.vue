@@ -27,7 +27,7 @@ const periods = [
   { key: 'ming', label: '明' },
   { key: 'qing', label: '清' },
   { key: 'minguo', label: '民国' },
-  { key: 'modern', label: '新中国至今' }
+  { key: 'modern', label: '现代' }
 ]
 </script>
 
@@ -36,8 +36,8 @@ const periods = [
   padding: 0 2px;
   background: transparent;
   overflow: hidden;
-  height: 22px;
-  min-width: 320px;
+  height: 42px;
+  min-width: 390px;
   max-width: 400px;
   margin: 0 auto;
   display: flex;
@@ -47,7 +47,7 @@ const periods = [
 .timeline-bar {
   position: relative;
   width: 100%;
-  height: 16px;
+  height: 32px;
   min-width: 220px;
   display: flex;
   align-items: center;
@@ -56,7 +56,7 @@ const periods = [
 }
 .line {
   position: absolute;
-  top: 8px;
+  top: 10px;
   left: 0;
   right: 0;
   height: 2px;
@@ -66,7 +66,7 @@ const periods = [
 }
 .timeline-item {
   position: absolute;
-  top: 2px;
+  top: 4px;
   transform: translateX(-50%);
   display: flex;
   flex-direction: column;
@@ -76,12 +76,12 @@ const periods = [
   width: 32px;
 }
 .dot {
-  width: 5px;
-  height: 5px;
+  width: 6px;
+  height: 6px;
   background: #e6e1d3;
   border-radius: 50%;
   border: 1px solid #bfae8e;
-  margin-bottom: 1px;
+  margin-bottom: 2px;
   transition: background 0.2s, border 0.2s;
 }
 .timeline-item.active .dot {
@@ -89,7 +89,7 @@ const periods = [
   border: 1px solid #a08c5b;
 }
 .label {
-  font-size: 0.52rem;
+  font-size: 1.0rem;
   color: #7c6a4d;
   margin-top: 0px;
   text-align: center;
