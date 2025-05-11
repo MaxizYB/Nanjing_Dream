@@ -1,5 +1,5 @@
 <script setup>
-import { ref } from 'vue'
+import { ref, onMounted, watch } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import TimelineSwitcher from './components/TimelineSwitcher.vue'
 
@@ -9,10 +9,34 @@ const route = useRoute()
 
 function handlePeriodChange(period) {
   currentPeriod.value = period
+  // 如果当前不在地图页面，跳转到地图页面并传递时期参数
   if (route.path !== '/map') {
-    router.push('/map')
+    router.push({
+      path: '/map',
+      query: { period: period }
+    })
+  } else {
+    // 如果已经在地图页面，只更新查询参数
+    router.replace({
+      query: { period: period }
+    })
   }
 }
+
+// 监听路由参数变化
+watch(() => route.query.period, (newPeriod) => {
+  if (newPeriod) {
+    currentPeriod.value = newPeriod
+  }
+}, { immediate: true })
+
+// 初始化时从 URL 参数中获取时期
+onMounted(() => {
+  const periodFromUrl = route.query.period
+  if (periodFromUrl) {
+    currentPeriod.value = periodFromUrl
+  }
+})
 </script>
 
 <template>
@@ -96,3 +120,4 @@ body {
   flex-direction: column;
 }
 </style>
+

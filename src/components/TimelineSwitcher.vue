@@ -11,24 +11,18 @@
         :style="{ left: `calc(${(0.12 + idx * 0.76/(periods.length-1)) * 100}% )` }"
       >
         <div class="dot"></div>
-        <div class="label">{{ period.label }}</div>
+        <div class="label">{{ period.name }}</div>
       </div>
     </div>
   </div>
 </template>
 
 <script setup>
+import { periods } from '../data/periods'
+
 const props = defineProps({
   currentPeriod: String
 })
-const periods = [
-  { key: 'sui-tang', label: '隋唐五代' },
-  { key: 'song-yuan', label: '宋元' },
-  { key: 'ming', label: '明' },
-  { key: 'qing', label: '清' },
-  { key: 'minguo', label: '民国' },
-  { key: 'modern', label: '现代' }
-]
 </script>
 
 <style scoped>
