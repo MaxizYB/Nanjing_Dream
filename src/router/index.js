@@ -5,9 +5,14 @@ import LocationDetail from '../views/LocationDetail.vue'
 
 const routes = [
     { path: '/', name: 'Home', component: Home },
-    { path: '/map', name: 'Map', component: MapView, props: true },
     {
-        path: '/location/:id',
+        path: '/map',
+        name: 'Map',
+        component: MapView,
+        props: true
+    },
+    {
+        path: '/location/:id/:period',
         name: 'LocationDetail',
         component: LocationDetail,
         props: true

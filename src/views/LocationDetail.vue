@@ -10,37 +10,139 @@
     <!-- 右侧内容区 -->
     <div class="main-content">
       <div class="description-container">
-        <p>{{ location?.description }}</p>
+        <!-- 图片容器 -->
+        <div v-if="periodInfo?.images && periodInfo.images.length > 0" class="images-container">
+          <div v-for="(image, index) in periodInfo.images" 
+               :key="index" 
+               class="image-wrapper">
+            <img :src="image" 
+                 :alt="`${location?.name} - ${currentPeriod}`"
+                 class="location-image"
+                 @load="onImageLoad" />
+          </div>
+        </div>
+
+        <!-- Markdown内容 -->
+        <MarkdownViewer v-if="periodInfo?.description" :content="periodInfo.description" />
+        
+        <!-- 问答组件 -->
+        <Quiz v-if="currentPeriodQuestions.length > 0" :questions="currentPeriodQuestions" />
       </div>
     </div>
 
-    <!-- 返回按钮 -->
-    <div class="back-button-container">
+    <!-- 右侧固定按钮组 -->
+    <div class="right-buttons">
+      <!-- 返回按钮 -->
       <div class="back-button" @click="goBack">
         <span class="arrow">←</span>
         <span class="button-text">返回地图</span>
       </div>
+
+      <!-- 时期切换按钮 -->
+      <div class="period-switcher">
+        <button v-for="period in availablePeriods" 
+                :key="period"
+                :class="['period-button', { active: period === currentPeriod }]"
+                @click="switchPeriod(period)">
+          {{ getPeriodName(period) }}
+        </button>
+      </div>
     </div>
+
+    <!-- 右侧滚动条区域 -->
+    <div class="scrollbar-area"></div>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getPeriodConfig } from '../data/periods'
+import { getLocationPeriods, getLocationPeriodInfo } from '../../assets/scripts/markers'
+import { locationMarkers } from '../../assets/scripts/markers/locations'
+import MarkdownViewer from '../components/MarkdownViewer.vue'
+import Quiz from '../components/Quiz.vue'
+import { locationQuizzes } from '../data/quizzes'
 
 const route = useRoute()
 const router = useRouter()
 const location = ref(null)
+const currentPeriod = ref('')
+const availablePeriods = ref([])
+const periodInfo = ref(null)
+
+// 获取当前时期的问答内容
+const currentPeriodQuestions = computed(() => {
+  if (!location.value || !currentPeriod.value) return []
+  return locationQuizzes[location.value.id]?.[currentPeriod.value]?.questions || []
+})
+
+const loadPeriodInfo = async () => {
+  if (!location.value || !currentPeriod.value) {
+    periodInfo.value = null
+    return
+  }
+  const info = getLocationPeriodInfo(location.value.id, currentPeriod.value)
+  if (info && typeof info.description === 'function') {
+    try {
+      const module = await info.description()
+      periodInfo.value = { ...info, description: module.default }
+    } catch (e) {
+      periodInfo.value = { ...info, description: '加载内容失败' }
+    }
+  } else {
+    periodInfo.value = info
+  }
+}
+
+const getPeriodName = (period) => {
+  const periodNames = {
+    'sui-tang': '隋唐五代',
+    'song-yuan': '宋元',
+    'ming': '明朝',
+    'qing': '清朝',
+    'jindai': '近代',
+    'modern': '现代'
+  }
+  return periodNames[period] || period
+}
+
+const switchPeriod = (period) => {
+  currentPeriod.value = period
+  router.replace({
+    name: 'LocationDetail',
+    params: { id: location.value.id, period }
+  })
+}
 
 onMounted(() => {
-  const [period, id] = route.params.id.split('-')
-  const periodConfig = getPeriodConfig(period)
-  location.value = periodConfig.markers.find(marker => marker.id === `${period}-${id}`)
+  const { id, period } = route.params
+  location.value = locationMarkers.find(marker => marker.id === id)
+  currentPeriod.value = period
+  availablePeriods.value = getLocationPeriods(id)
+  loadPeriodInfo()
+})
+
+watch([location, currentPeriod], () => {
+  if (location.value) {
+    availablePeriods.value = getLocationPeriods(location.value.id)
+    loadPeriodInfo()
+  }
 })
 
 const goBack = () => {
-  router.push('/map?period=modern')
+  router.push({ path: '/map', query: { period: currentPeriod.value } })
+}
+
+// 添加图片加载处理函数
+const onImageLoad = (event) => {
+  const img = event.target;
+  const wrapper = img.parentElement;
+  // 根据图片实际尺寸设置容器样式
+  if (img.naturalWidth > img.naturalHeight) {
+    wrapper.style.gridColumn = 'span 2';
+  } else {
+    wrapper.style.gridColumn = 'span 1';
+  }
 }
 </script>
 
@@ -49,17 +151,19 @@ const goBack = () => {
   min-height: 100vh;
   display: flex;
   background: #f5f3e7;
-  padding-top: 64px; /* 防止与导航栏重叠 */
+  padding-top: 64px;
+  position: relative;
+  overflow: hidden;
 }
 
 /* 左侧固定栏样式 */
 .fixed-sidebar {
-  width: 200px;
+  width: 150px;
   min-height: 100vh;
   background: #fbfaf8;
   position: fixed;
   left: 0;
-  top: 46px; /* 关键：让侧边栏从导航栏下方开始 */
+  top: 46px;
   display: flex;
   flex-direction: column;
   box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
@@ -106,17 +210,28 @@ const goBack = () => {
 .main-content {
   flex: 1;
   margin-left: 200px;
+  margin-right: 120px; /* 为右侧按钮和滚动条留出空间 */
   padding: 3rem;
-  max-width: 1000px;
-  padding-top: 0px; /* 防止与导航栏重叠 */
+  max-width: calc(100% - 320px);
+  padding-top: 0px;
+  height: calc(100vh - 64px);
+  overflow-y: auto;
+  position: relative;
+  scrollbar-width: none; /* Firefox */
+  -ms-overflow-style: none; /* IE and Edge */
+  top: -50px;
+}
+
+/* 隐藏默认滚动条 */
+.main-content::-webkit-scrollbar {
+  display: none;
 }
 
 .description-container {
-  background: white;
-  padding: 2.5rem;
+  padding: 0;
   border-radius: 12px;
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.05);
   margin-bottom: 2rem;
+  top: 0px;
 }
 
 .description-container h2 {
@@ -128,6 +243,29 @@ const goBack = () => {
   line-height: 2;
   font-size: 1.1rem;
   font-family: 'STKaiti', 'KaiTi', serif;
+}
+
+/* 右侧滚动条区域 */
+.scrollbar-area {
+  position: fixed;
+  right: 0;
+  top: 46px;
+  width: 20px;
+  height: calc(100vh - 46px);
+  background: #f5f3e7;
+  z-index: 15;
+}
+
+/* 右侧固定按钮容器 */
+.right-buttons {
+  position: fixed;
+  right: 30px; /* 调整位置，避免与滚动条重叠 */
+  top: 100px;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  z-index: 20;
+  align-items: flex-end;
 }
 
 /* 返回按钮样式 */
@@ -160,21 +298,68 @@ const goBack = () => {
   font-weight: 500;
 }
 
-@media (max-width: 1024px) {
-  .fixed-sidebar {
-    width: 200px;
-  }
-  
-  .main-content {
-    margin-left: 200px;
-    padding: 2rem;
-  }
-  
-  .vertical-title {
-    font-size: 2rem;
-  }
+/* 时期切换器样式 */
+.period-switcher {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
 }
 
+.period-button {
+  padding: 8px 16px;
+  background: #fbfaf8;
+  border: 1px solid #d6c9a5;
+  border-radius: 4px;
+  color: #634d0d;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-family: 'STKaiti', 'KaiTi', serif;
+  font-size: 14px;
+  white-space: nowrap;
+  text-align: right;
+}
+
+.period-button:hover {
+  background: #e6e1d3;
+  transform: translateX(-5px);
+}
+
+.period-button.active {
+  background: #4b3e2e;
+  color: #fbfaf8;
+  border-color: #4b3e2e;
+}
+
+/* 图片容器样式 */
+.images-container {
+  margin-bottom: 30px;
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 20px;
+  width: 100%;
+}
+
+.image-wrapper {
+  width: 100%;
+  overflow: hidden;
+  border-radius: 8px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: transform 0.3s ease;
+}
+
+.image-wrapper:hover {
+  transform: scale(1.02);
+}
+
+.location-image {
+  width: 100%;
+  height: auto;
+  display: block;
+  object-fit: contain;
+}
+
+/* 响应式布局调整 */
 @media (max-width: 768px) {
   .location-detail {
     flex-direction: column;
@@ -184,8 +369,30 @@ const goBack = () => {
   .fixed-sidebar {
     position: relative;
     width: 100%;
-    min-height: auto;
-    padding-top: 0;
+    height: auto;
+    top: 0;
+  }
+  
+  .main-content {
+    margin-left: 0;
+    margin-right: 0;
+    padding: 1.5rem;
+    max-width: 100%;
+    height: auto;
+    overflow-y: visible;
+  }
+  
+  .right-buttons {
+    position: fixed;
+    bottom: 20px;
+    top: auto;
+    right: 20px;
+    flex-direction: row-reverse;
+    gap: 10px;
+  }
+  
+  .period-switcher {
+    flex-direction: row;
   }
   
   .vertical-title {
@@ -195,22 +402,9 @@ const goBack = () => {
     text-align: center;
     padding: 1rem 0;
   }
-  
-  .sidebar-image {
-    height: 200px;
-  }
-  
-  .main-content {
-    margin-left: 0;
-    padding: 1.5rem;
-    padding-top: 0;
-  }
-}
 
-.back-button-container {
-  position: fixed;
-  right: 20px;
-  top: 100px; /* 假设导航栏高度为46px */
-  z-index: 20;
+  .scrollbar-area {
+    display: none; /* 在移动端隐藏滚动条区域 */
+  }
 }
 </style> 

@@ -3,11 +3,12 @@
 </template>
 
 <script setup>
-import { onMounted, ref, watch, onBeforeUnmount } from 'vue'
+import { onMounted, ref, watch, onBeforeUnmount, nextTick } from 'vue'
 import { useRouter, useRoute } from 'vue-router'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import { getPeriodConfig } from '../data/periods'
+import { getMarkersByPeriod } from '../../assets/scripts/markers'
 
 const props = defineProps({
   period: {
@@ -22,6 +23,9 @@ const map = ref(null)
 const tileLayer = ref(null)
 const markers = ref([])
 
+// 标记点管理
+const markerLayer = ref(null)
+
 // 初始化地图
 function initMap() {
   if (map.value) return
@@ -32,12 +36,15 @@ function initMap() {
     maxZoom: 5,
     zoomControl: true,
     scrollWheelZoom: true,
-    center: [128, 128],  // 地图中心点
+    center: [128, 128],
     zoom: 2,
     attributionControl: false,
     maxBounds: [[0, 0], [256, 256]],
     maxBoundsViscosity: 1.0
   })
+
+  // 创建标记点图层组
+  markerLayer.value = L.layerGroup().addTo(map.value)
 
   // 添加缩放控件
   L.control.zoom({
@@ -90,16 +97,6 @@ function updateMapTiles(period) {
     updateWhenZooming: false
   })
 
-  // 添加错误处理
-  tileLayer.value.on('tileerror', (e) => {
-    console.error('瓦片加载错误:', e)
-    console.error('错误瓦片URL:', e.tile.src)
-  })
-
-  tileLayer.value.on('tileload', (e) => {
-    console.log('瓦片加载成功:', e.tile.src)
-  })
-
   tileLayer.value.addTo(map.value)
   
   // 确保地图居中显示
@@ -110,47 +107,86 @@ function updateMapTiles(period) {
 
 // 清除所有标记点
 function clearMarkers() {
-  markers.value.forEach(marker => {
-    map.value.removeLayer(marker)
-  })
+  if (!map.value || !markerLayer.value) return
+  console.log('清除所有标记点')
+  markerLayer.value.clearLayers()
   markers.value = []
+}
+
+// 清理地图
+function cleanupMap() {
+  if (!map.value) return
+  console.log('清理地图')
+  
+  // 清除标记点
+  clearMarkers()
+  
+  // 移除瓦片图层
+  if (tileLayer.value) {
+    if (map.value.hasLayer(tileLayer.value)) {
+      map.value.removeLayer(tileLayer.value)
+    }
+    tileLayer.value = null
+  }
 }
 
 // 添加标记点
 function addMarkers(period) {
-  const config = getPeriodConfig(period)
+  console.log('添加标记点，时期:', period)
+  if (!map.value || !markerLayer.value) return
   
-  config.markers.forEach(markerData => {
-    // 创建自定义图标
-    const icon = L.divIcon({
-      className: 'custom-marker',
-      html: `
-        <div class="marker-icon">
-          <img src="${markerData.icon}" alt="${markerData.name}" />
-          <div class="marker-label">${markerData.name}</div>
-        </div>
-      `,
-      iconSize: [40, 40],
-      iconAnchor: [20, 40]
-    })
+  // 确保先清理现有标记点
+  clearMarkers()
+  
+  const markers = getMarkersByPeriod(period)
+  console.log('当前时期标记点数量:', markers.length)
+  
+  markers.forEach(markerData => {
+    const periodInfo = markerData.periods[period]
+    if (!periodInfo) {
+      console.log(`标记点 ${markerData.name} 在时期 ${period} 不存在`)
+      return
+    }
 
-    // 创建标记点
-    const marker = L.marker(markerData.position, { icon })
-      .addTo(map.value)
-      .bindPopup(`
+    console.log(`添加标记点 ${markerData.name} 在时期 ${period}`)
+
+    try {
+      // 创建自定义图标
+      const icon = L.divIcon({
+        className: 'custom-marker',
+        html: `
+          <div class="marker-icon">
+            <img src="/assets/images/markers/${periodInfo.icon}" alt="${markerData.name}" />
+            <div class="marker-label">${markerData.name}</div>
+          </div>
+        `,
+        iconSize: [40, 40],
+        iconAnchor: [20, 40]
+      })
+
+      // 创建标记点
+      const marker = L.marker(
+        map.value.unproject(periodInfo.position, 0),
+        { icon }
+      ).bindPopup(`
         <div class="marker-popup">
           <h3>${markerData.name}</h3>
-          <p>${markerData.description}</p>
-          <a href="${markerData.link}" class="marker-link">查看详情</a>
+          <p>${periodInfo.description}</p>
+          <a href="/location/${markerData.id}/${period}" class="marker-link">查看详情</a>
         </div>
       `)
 
-    // 添加点击事件
-    marker.on('click', () => {
-      router.push(markerData.link)
-    })
+      // 添加点击事件
+      marker.on('click', () => {
+        router.push(`/location/${markerData.id}/${period}`)
+      })
 
-    markers.value.push(marker)
+      // 将标记点添加到图层组
+      marker.addTo(markerLayer.value)
+      markers.value.push(marker)
+    } catch (error) {
+      console.error(`添加标记点 ${markerData.name} 时出错:`, error)
+    }
   })
 }
 
@@ -161,38 +197,83 @@ function updateMapContent(period) {
     console.error('地图未初始化')
     return
   }
-  clearMarkers()
-  updateMapTiles(period)
-  addMarkers(period)
+  
+  // 先清理现有内容
+  cleanupMap()
+
+  try {
+    // 重新添加瓦片图层
+    const config = getPeriodConfig(period)
+    if (!config) {
+      console.error('未找到时期配置:', period)
+      return
+    }
+
+    console.log('添加地图瓦片:', config.mapTiles)
+    tileLayer.value = L.tileLayer(config.mapTiles, {
+      noWrap: true,
+      attribution: '© Nanjing Map',
+      tileSize: 256,
+      maxNativeZoom: 5,
+      minZoom: 0,
+      maxZoom: 5,
+      continuousWorld: false,
+      updateWhenZooming: false
+    })
+
+    tileLayer.value.addTo(map.value)
+    
+    // 添加标记点
+    addMarkers(period)
+
+    // 确保地图视图正确
+    setTimeout(() => {
+      map.value.setView([128, 128], 2)
+    }, 100)
+  } catch (error) {
+    console.error('更新地图内容时出错:', error)
+  }
 }
 
-// 监听时期变化
-watch(() => props.period, (newPeriod) => {
-  console.log('时期变化:', newPeriod)
-  if (newPeriod) {
-    updateMapContent(newPeriod)
+// 监听 props.period 变化
+watch(() => props.period, (newPeriod, oldPeriod) => {
+  console.log('props时期变化:', newPeriod, '旧时期:', oldPeriod)
+  if (newPeriod && newPeriod !== oldPeriod) {
+    // 确保在下一个事件循环中更新地图内容
+    nextTick(() => {
+      updateMapContent(newPeriod)
+    })
   }
 }, { immediate: true })
 
-// 监听 URL 参数变化
-watch(() => route.query.period, (newPeriod) => {
-  console.log('URL 参数变化:', newPeriod)
-  if (newPeriod && newPeriod !== props.period) {
-    updateMapContent(newPeriod)
+// 监听路由变化
+watch(() => route.path, (newPath, oldPath) => {
+  console.log('路由路径变化:', newPath, '旧路径:', oldPath)
+  if (newPath === '/map') {
+    const periodFromUrl = route.query.period || 'modern'
+    console.log('检测到地图路由，时期:', periodFromUrl)
+    // 确保地图和标记点被正确清理和重新加载
+    nextTick(() => {
+      updateMapContent(periodFromUrl)
+    })
   }
-})
+}, { immediate: true })
 
 onMounted(() => {
   console.log('组件挂载')
   initMap()
-  // 如果 URL 中有时期参数，使用它来初始化地图
-  const periodFromUrl = route.query.period
-  if (periodFromUrl) {
-    updateMapContent(periodFromUrl)
-  }
+  // 使用 props.period 初始化地图
+  console.log('初始化地图，时期:', props.period)
+  updateMapContent(props.period)
 })
 
+// 组件卸载时清理
 onBeforeUnmount(() => {
+  cleanupMap()
+  if (markerLayer.value) {
+    markerLayer.value.clearLayers()
+    markerLayer.value = null
+  }
   if (map.value) {
     map.value.remove()
     map.value = null

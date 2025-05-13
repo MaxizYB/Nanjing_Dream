@@ -18,6 +18,7 @@ function handlePeriodChange(period) {
   } else {
     // 如果已经在地图页面，只更新查询参数
     router.replace({
+      path: '/map',
       query: { period: period }
     })
   }
@@ -27,6 +28,15 @@ function handlePeriodChange(period) {
 watch(() => route.query.period, (newPeriod) => {
   if (newPeriod) {
     currentPeriod.value = newPeriod
+  }
+}, { immediate: true })
+
+// 监听路由路径变化
+watch(() => route.path, (newPath) => {
+  // 当路由变化时，确保 currentPeriod 与 URL 参数同步
+  const periodFromUrl = route.query.period
+  if (periodFromUrl) {
+    currentPeriod.value = periodFromUrl
   }
 }, { immediate: true })
 

@@ -1,42 +1,40 @@
-import { allMarkers } from '../../assets/scripts/markers'
+import { getMarkersByPeriod } from '../../assets/scripts/markers'
 
 // 时期配置数据
 export const periodConfigs = {
     'sui-tang': {
         name: '隋唐五代',
-        mapTiles: '../../assets/maps/modern/tiles/{z}/{x}_{y}.png',
-        markers: allMarkers['sui-tang']
+        mapTiles: '/assets/maps/tiles/{z}/{x}_{y}.png'
     },
     'song-yuan': {
         name: '宋元',
-        mapTiles: '../../assets/maps/modern/tiles/{z}/{x}_{y}.png',
-        markers: allMarkers['song-yuan']
+        mapTiles: '/assets/maps/tiles/{z}/{x}_{y}.png'
     },
     'ming': {
         name: '明',
-        mapTiles: '../../assets/maps/modern/tiles/{z}/{x}_{y}.png',
-        markers: allMarkers['ming']
+        mapTiles: '/assets/maps/tiles/{z}/{x}_{y}.png'
     },
     'qing': {
         name: '清',
-        mapTiles: '../../assets/maps/modern/tiles/{z}/{x}_{y}.png',
-        markers: allMarkers['qing']
+        mapTiles: '/assets/maps/tiles/{z}/{x}_{y}.png'
     },
-    'minguo': {
-        name: '民国',
-        mapTiles: '../../assets/maps/modern/tiles/{z}/{x}_{y}.png',
-        markers: allMarkers['minguo']
+    'jindai': {
+        name: '近代',
+        mapTiles: '/assets/maps/tiles/{z}/{x}_{y}.png'
     },
     'modern': {
         name: '现代',
-        mapTiles: '../../assets/maps/modern/tiles/{z}/{x}_{y}.png',
-        markers: allMarkers['modern']
+        mapTiles: '/assets/maps/tiles/{z}/{x}_{y}.png'
     }
 }
 
 // 获取指定时期的配置
 export function getPeriodConfig(period) {
-    return periodConfigs[period] || periodConfigs.modern
+    const config = periodConfigs[period] || periodConfigs.modern
+    return {
+        ...config,
+        markers: getMarkersByPeriod(period)
+    }
 }
 
 // 获取所有时期列表
