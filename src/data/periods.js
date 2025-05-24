@@ -1,4 +1,4 @@
-import { getMarkersByPeriod } from '../../assets/scripts/markers'
+import { getMarkersByPeriod } from '../assets/scripts/markers'
 
 // 时期配置数据
 export const periodConfigs = {

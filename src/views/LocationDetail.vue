@@ -27,6 +27,15 @@
         
         <!-- 问答组件 -->
         <Quiz v-if="currentPeriodQuestions.length > 0" :questions="currentPeriodQuestions" />
+
+        <!-- 评论组件 -->
+        <Comments 
+          v-if="currentPeriod === 'modern'"
+          :location-id="location?.id"
+          :period="currentPeriod"
+          :is-logged-in="props.isLoggedIn"
+          @show-login="showLoginModal = true"
+        />
       </div>
     </div>
 
@@ -49,19 +58,33 @@
       </div>
     </div>
 
-    <!-- 右侧滚动条区域 -->
-    <div class="scrollbar-area"></div>
+    <LoginModal 
+      :show="showLoginModal" 
+      @close="showLoginModal = false" 
+      @showRegister="() => { showLoginModal = false; showRegisterModal = true }"
+      @loginSuccess="$emit('loginSuccess')"
+    />
+    <RegisterModal 
+      :show="showRegisterModal" 
+      @close="showRegisterModal = false" 
+      @showLogin="() => { showRegisterModal = false; showLoginModal = true }"
+    />
   </div>
 </template>
 
 <script setup>
 import { ref, onMounted, watch, computed } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { getLocationPeriods, getLocationPeriodInfo } from '../../assets/scripts/markers'
-import { locationMarkers } from '../../assets/scripts/markers/locations'
+import { getLocationPeriods, getLocationPeriodInfo } from '../assets/scripts/markers'
+import { locationMarkers } from '../assets/scripts/markers/locations'
 import MarkdownViewer from '../components/MarkdownViewer.vue'
 import Quiz from '../components/Quiz.vue'
+import Comments from '../components/Comments.vue'
+import LoginModal from '../components/LoginModal.vue'
+import RegisterModal from '../components/RegisterModal.vue'
 import { locationQuizzes } from '../data/quizzes'
+import axios from 'axios'
+import { BASE_URL } from '@/api'
 
 const route = useRoute()
 const router = useRouter()
@@ -69,6 +92,15 @@ const location = ref(null)
 const currentPeriod = ref('')
 const availablePeriods = ref([])
 const periodInfo = ref(null)
+const showLoginModal = ref(false)
+const showRegisterModal = ref(false)
+
+const props = defineProps({
+  isLoggedIn: {
+    type: Boolean,
+    required: true
+  }
+})
 
 // 获取当前时期的问答内容
 const currentPeriodQuestions = computed(() => {
@@ -120,12 +152,54 @@ onMounted(() => {
   currentPeriod.value = period
   availablePeriods.value = getLocationPeriods(id)
   loadPeriodInfo()
+  // 访问统计
+  const token = localStorage.getItem('token')
+  if (token && location.value && currentPeriod.value) {
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const userId = payload.userId || payload.id
+      axios.post(`${BASE_URL}/api/achievement/visit-location`, {
+        user_id: userId,
+        location_id: location.value.id,
+        period: currentPeriod.value
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(() => {
+        console.log('访问地点统计已上报', location.value.id, currentPeriod.value)
+      }).catch(err => {
+        console.error('访问地点统计失败', err)
+      })
+    } catch (e) {}
+  }
 })
 
 watch([location, currentPeriod], () => {
-  if (location.value) {
-    availablePeriods.value = getLocationPeriods(location.value.id)
-    loadPeriodInfo()
+  if (location.value && currentPeriod.value) {
+    const token = localStorage.getItem('token')
+    if (!token) return
+    try {
+      const payload = JSON.parse(atob(token.split('.')[1]))
+      const userId = payload.userId || payload.id
+      if (!userId) return
+      axios.post(`${BASE_URL}/api/achievement/visit-location`, {
+        user_id: userId,
+        location_id: location.value.id,
+        period: currentPeriod.value
+      }, {
+        headers: { Authorization: `Bearer ${token}` }
+      }).then(() => {
+        console.log('访问地点统计已上报', location.value.id, currentPeriod.value)
+      }).catch(err => {
+        console.error('访问地点统计失败', err)
+      })
+    } catch (e) {}
+  }
+})
+
+// 监听登录状态变化
+watch(() => props.isLoggedIn, (newVal) => {
+  if (newVal) {
+    showLoginModal.value = false
   }
 })
 
@@ -144,6 +218,16 @@ const onImageLoad = (event) => {
     wrapper.style.gridColumn = 'span 1';
   }
 }
+
+watch(
+  () => [route.params.id, route.params.period],
+  ([newId, newPeriod]) => {
+    location.value = locationMarkers.find(marker => marker.id === newId)
+    currentPeriod.value = newPeriod
+    availablePeriods.value = getLocationPeriods(newId)
+    loadPeriodInfo()
+  }
+)
 </script>
 
 <style scoped>
@@ -210,21 +294,28 @@ const onImageLoad = (event) => {
 .main-content {
   flex: 1;
   margin-left: 200px;
-  margin-right: 120px; /* 为右侧按钮和滚动条留出空间 */
+  margin-right: 0; /* 让内容和滚动条紧贴页面右侧 */
   padding: 3rem;
-  max-width: calc(100% - 320px);
+  max-width: calc(100% - 200px); /* 只考虑左侧sidebar宽度 */
   padding-top: 0px;
   height: calc(100vh - 64px);
   overflow-y: auto;
   position: relative;
-  scrollbar-width: none; /* Firefox */
-  -ms-overflow-style: none; /* IE and Edge */
   top: -50px;
 }
 
-/* 隐藏默认滚动条 */
+/* 自定义滚动条样式 */
 .main-content::-webkit-scrollbar {
-  display: none;
+  width: 10px;
+  background: #f5f3e7;
+  border-radius: 8px;
+}
+.main-content::-webkit-scrollbar-thumb {
+  background: #d6c9a5;
+  border-radius: 8px;
+}
+.main-content::-webkit-scrollbar-thumb:hover {
+  background: #a08c5b;
 }
 
 .description-container {
@@ -245,21 +336,10 @@ const onImageLoad = (event) => {
   font-family: 'STKaiti', 'KaiTi', serif;
 }
 
-/* 右侧滚动条区域 */
-.scrollbar-area {
-  position: fixed;
-  right: 0;
-  top: 46px;
-  width: 20px;
-  height: calc(100vh - 46px);
-  background: #f5f3e7;
-  z-index: 15;
-}
-
 /* 右侧固定按钮容器 */
 .right-buttons {
   position: fixed;
-  right: 30px; /* 调整位置，避免与滚动条重叠 */
+  right: 20px; /* 靠近右侧，但不遮挡滚动条 */
   top: 100px;
   display: flex;
   flex-direction: column;
@@ -402,9 +482,26 @@ const onImageLoad = (event) => {
     text-align: center;
     padding: 1rem 0;
   }
+}
 
-  .scrollbar-area {
-    display: none; /* 在移动端隐藏滚动条区域 */
-  }
+.detail-main-content {
+  overflow-y: auto;
+  max-height: 80vh;
+  scrollbar-width: thin;
+  scrollbar-color: #d6c9a5 #f5f3e7;
+}
+
+/* Webkit浏览器自定义滚动条 */
+.detail-main-content::-webkit-scrollbar {
+  width: 10px;
+  background: #f5f3e7;
+  border-radius: 8px;
+}
+.detail-main-content::-webkit-scrollbar-thumb {
+  background: #d6c9a5;
+  border-radius: 8px;
+}
+.detail-main-content::-webkit-scrollbar-thumb:hover {
+  background: #a08c5b;
 }
 </style> 

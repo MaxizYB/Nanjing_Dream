@@ -54,7 +54,7 @@ def create_error_tile(output_path, tile_size=256):
 
 if __name__ == "__main__":
     # 生成错误瓦片
-    create_error_tile("public/tiles/error.png")
+    #create_error_tile("public/tiles/error.png")
 
     # 生成地图瓦片
     create_tiles("first_edition_map.png", "first_edition_tiles")
